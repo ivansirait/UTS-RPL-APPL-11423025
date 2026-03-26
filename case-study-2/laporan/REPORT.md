@@ -66,7 +66,38 @@ graph TD
 
 Arsitektur baru mempertahankan fungsionalitas lama dengan memisahkan modul menjadi layanan independen, menggunakan API Gateway untuk routing, message queue untuk komunikasi asinkron, dan service discovery untuk lokasi layanan.
 
-## 3. Reasoning & Trade-offs
+## 3. Data Architecture
+
+### Monolithic Data Architecture
+- **Teknologi Database**: Single shared relational database (e.g., MySQL atau PostgreSQL)
+- **Schema**: Semua tabel dalam satu database schema
+  - `users` - Informasi pengguna
+  - `appointments` - Data janji temu
+  - `medical_records` - Rekam medis
+  - `prescriptions` - Resep obat
+  - `payments` - Data pembayaran
+  - `analytics_data` - Data untuk analisis
+- **Coupling**: Semua modul mengakses database yang sama, menyebabkan tight coupling dan kesulitan dalam scaling
+
+### Microservices Data Architecture
+- **Teknologi Database**: Polyglot persistence - database berbeda per service berdasarkan kebutuhan
+  - **Auth Service**: PostgreSQL (relational untuk user data)
+  - **Appointment Service**: PostgreSQL (relational untuk scheduling)
+  - **EHR Service**: MongoDB (document-based untuk medical records yang fleksibel)
+  - **Pharmacy Service**: PostgreSQL (relational untuk inventory)
+  - **Analytics Service**: Elasticsearch (search engine untuk analytics queries)
+  - **Payment Service**: PostgreSQL dengan encryption (secure financial data)
+- **Data Ownership**: Setiap service memiliki database sendiri
+- **Data Consistency**: Eventual consistency menggunakan event-driven architecture
+- **Data Migration**: Scripts untuk migrate data dari shared DB ke individual DBs
+
+### Data Flow & Integration
+- **Sync Communication**: REST APIs untuk real-time data exchange
+- **Async Communication**: Message Queue (RabbitMQ/Kafka) untuk events
+- **API Gateway**: Centralized routing dan authentication
+- **Service Discovery**: Dynamic service location (Eureka/Consul)
+
+## 4. Reasoning & Trade-offs
 
 ### Reasoning
 - **Skalabilitas**: Microservices memungkinkan penskalaan horizontal per modul berdasarkan beban.
@@ -80,7 +111,7 @@ Arsitektur baru mempertahankan fungsionalitas lama dengan memisahkan modul menja
 - **Network Latency**: Komunikasi antar layanan melalui jaringan lebih lambat daripada method calls internal.
 - **Operational Overhead**: Monitoring, logging, dan debugging lebih rumit.
 
-## 4. Migration Strategy
+## 5. Migration Strategy
 
 Menggunakan **Strangler Pattern** dengan pendekatan bertahap:
 
@@ -102,3 +133,42 @@ Menggunakan **Strangler Pattern** dengan pendekatan bertahap:
 
 5. **Phase 5: Full Migration**
    - Deploy semua microservices dan decommission monolith.
+
+## 6. Teknologi yang Dibutuhkan
+
+### Development Technologies
+- **Programming Language**: Java 17+
+- **Framework**: Spring Boot 3.x untuk microservices
+- **Build Tool**: Maven atau Gradle
+- **Version Control**: Git
+
+### Infrastructure & Runtime
+- **Containerization**: Docker untuk packaging services
+- **Orchestration**: Kubernetes untuk deployment dan scaling
+- **API Gateway**: Spring Cloud Gateway atau Kong
+- **Service Discovery**: Eureka atau Consul
+- **Message Queue**: RabbitMQ atau Apache Kafka
+- **Monitoring**: Prometheus + Grafana
+- **Logging**: ELK Stack (Elasticsearch, Logstash, Kibana)
+
+### Databases
+- **Relational**: PostgreSQL untuk structured data
+- **Document**: MongoDB untuk flexible medical records
+- **Search**: Elasticsearch untuk analytics
+- **In-Memory**: Redis untuk caching (optional)
+
+### Security
+- **Authentication**: JWT tokens
+- **Authorization**: OAuth 2.0 / OpenID Connect
+- **API Security**: Rate limiting, CORS
+- **Data Security**: Encryption at rest/transit
+
+### Development Tools
+- **IDE**: IntelliJ IDEA atau VS Code
+- **Testing**: JUnit, Mockito untuk unit tests
+- **API Testing**: Postman atau REST Assured
+- **CI/CD**: Jenkins, GitHub Actions, atau GitLab CI
+
+### Cloud Platforms (Optional)
+- **Deployment**: AWS, Azure, atau Google Cloud
+- **Managed Services**: RDS, S3, Lambda functions untuk serverless components
