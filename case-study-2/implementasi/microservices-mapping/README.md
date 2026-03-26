@@ -9,6 +9,26 @@ Setiap microservice memiliki:
 - Message queue untuk komunikasi asinkron
 - Service discovery untuk lokasi dinamis
 
+## Implementasi Kode
+Struktur kode Spring Boot untuk setiap microservice dapat ditemukan di folder `../microservices/`.
+
+### Struktur Folder:
+```
+microservices/
+├── auth-service/
+│   └── src/main/java/com/meditrack/auth/
+│       ├── AuthApplication.java
+│       └── AuthController.java
+├── appointment-service/
+│   └── src/main/java/com/meditrack/appointment/
+│       ├── AppointmentApplication.java
+│       └── AppointmentController.java
+├── ehr-service/
+├── pharmacy-service/
+├── analytics-service/
+└── payment-service/
+```
+
 ## Mapping Detail
 
 ### 1. Auth Service (dari User Module)
