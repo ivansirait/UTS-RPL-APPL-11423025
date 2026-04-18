@@ -151,7 +151,7 @@ export default function PharmacistDashboard() {
             <CardContent>
               <Button className="w-full" asChild>
                 <Link href="/pharmacy/medications">
-                  View Medications
+                  View Medicatio
                 </Link>
               </Button>
             </CardContent>
