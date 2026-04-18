@@ -1,7 +1,4 @@
--- MediTrack migration for existing Supabase databases
--- Adds appointment approval flow and keeps existing data intact
 
--- Add pending status to appointments if the constraint does not already allow it
 DO $$
 BEGIN
   IF EXISTS (

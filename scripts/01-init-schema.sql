@@ -1,7 +1,6 @@
 -- MediTrack Database Schema
 -- Supabase PostgreSQL initialization
 
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create users table
