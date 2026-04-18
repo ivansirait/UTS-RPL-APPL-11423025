@@ -39,6 +39,9 @@ export async function GET(request: NextRequest) {
     if (role === 'doctor' && currentUser.role === 'patient') {
       // Patient can view doctors for booking
       users = await db.users.getAll('doctor');
+    } else if (role === 'patient' && hasRole(currentUser.role, ['doctor', 'admin'])) {
+      // Doctor and admin can view patients for records and care workflows
+      users = await db.users.getAll('patient');
     } else {
       // Only admin can query arbitrary user data
       if (!hasRole(currentUser.role, ['admin'])) {

@@ -38,7 +38,7 @@ export interface Department {
 }
 
 // Appointment Types
-export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'no-show';
+export type AppointmentStatus = 'pending' | 'scheduled' | 'completed' | 'cancelled' | 'no-show';
 
 export interface Appointment {
   id: string;
@@ -68,6 +68,7 @@ export interface MedicalRecord {
   medications?: string;
   allergies?: string;
   physical_examination?: string;
+  lab_results?: string;
   diagnosis?: string;
   treatment_plan?: string;
   notes?: string;
@@ -123,7 +124,7 @@ export interface Prescription {
 }
 
 // Payment Types
-export type PaymentMethod = 'credit_card' | 'debit_card' | 'bank_transfer' | 'cash';
+export type PaymentMethod = 'credit_card' | 'debit_card' | 'bank_transfer' | 'cash' | 'insurance_claim';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 
 export interface Payment {

@@ -93,7 +93,7 @@ export default function BookAppointmentPage() {
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'duration_minutes' ? Number(value) : value,
     }));
   };
 
@@ -128,6 +128,13 @@ export default function BookAppointmentPage() {
       return;
     }
 
+    const appointmentDateTime = new Date(formData.appointment_date);
+    if (Number.isNaN(appointmentDateTime.getTime())) {
+      setError('Please enter a valid appointment date and time');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/appointments', {
         method: 'POST',
@@ -137,9 +144,9 @@ export default function BookAppointmentPage() {
         },
         body: JSON.stringify({
           doctor_id: formData.doctor_id,
-          appointment_date: formData.appointment_date,
-          duration_minutes: formData.duration_minutes,
-          reason_for_visit: formData.reason_for_visit,
+          appointment_date: appointmentDateTime.toISOString(),
+          duration_minutes: Number(formData.duration_minutes),
+          reason_for_visit: formData.reason_for_visit.trim(),
           notes: formData.notes,
         }),
       });

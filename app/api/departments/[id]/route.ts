@@ -5,9 +5,10 @@ import { ZodError } from 'zod';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -17,8 +18,13 @@ export async function GET(
     }
 
     const currentUser = await db.users.getById(token);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 401 }
+      );
+    }
 
-    // Only admins can view departments
     if (!hasRole(currentUser.role, ['admin'])) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
@@ -26,7 +32,7 @@ export async function GET(
       );
     }
 
-    const department = await db.departments.getById(params.id);
+    const department = await db.departments.getById(id);
     if (!department) {
       return NextResponse.json(
         { success: false, error: 'Department not found' },
@@ -49,9 +55,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -61,8 +68,13 @@ export async function PUT(
     }
 
     const currentUser = await db.users.getById(token);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 401 }
+      );
+    }
 
-    // Only admins can update departments
     if (!hasRole(currentUser.role, ['admin'])) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
@@ -70,7 +82,7 @@ export async function PUT(
       );
     }
 
-    const department = await db.departments.getById(params.id);
+    const department = await db.departments.getById(id);
     if (!department) {
       return NextResponse.json(
         { success: false, error: 'Department not found' },
@@ -79,7 +91,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const updatedDepartment = await db.departments.update(params.id, {
+    const updatedDepartment = await db.departments.update(id, {
       ...body,
       updated_at: new Date().toISOString(),
     });
@@ -107,9 +119,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -119,8 +132,13 @@ export async function DELETE(
     }
 
     const currentUser = await db.users.getById(token);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 401 }
+      );
+    }
 
-    // Only admins can delete departments
     if (!hasRole(currentUser.role, ['admin'])) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
@@ -128,7 +146,7 @@ export async function DELETE(
       );
     }
 
-    const department = await db.departments.getById(params.id);
+    const department = await db.departments.getById(id);
     if (!department) {
       return NextResponse.json(
         { success: false, error: 'Department not found' },
@@ -136,7 +154,7 @@ export async function DELETE(
       );
     }
 
-    await db.departments.delete(params.id);
+    await db.departments.delete(id);
 
     return NextResponse.json({
       success: true,

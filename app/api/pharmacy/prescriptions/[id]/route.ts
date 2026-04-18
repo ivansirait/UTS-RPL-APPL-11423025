@@ -6,9 +6,10 @@ import { ZodError } from 'zod';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -17,7 +18,7 @@ export async function GET(
       );
     }
 
-    const prescription = await db.prescriptions.getById(params.id);
+    const prescription = await db.prescriptions.getById(id);
     if (!prescription) {
       return NextResponse.json(
         { success: false, error: 'Prescription not found' },
@@ -54,9 +55,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -65,7 +67,7 @@ export async function PUT(
       );
     }
 
-    const prescription = await db.prescriptions.getById(params.id);
+    const prescription = await db.prescriptions.getById(id);
     if (!prescription) {
       return NextResponse.json(
         { success: false, error: 'Prescription not found' },
@@ -73,11 +75,14 @@ export async function PUT(
       );
     }
 
-    // Check authorization - pharmacist can update status to dispensed, doctor/admin can update anything
+    const body = await request.json();
+    const validatedData = prescriptionUpdateSchema.parse(body);
+
+    // Check authorization - pharmacist can only mark as dispensed, doctor/admin can update anything
     const currentUser = await db.users.getById(token);
     const isAuthorized =
       hasRole(currentUser.role, ['doctor', 'admin']) ||
-      (hasRole(currentUser.role, ['pharmacist']) && body.status === 'dispensed');
+      (hasRole(currentUser.role, ['pharmacist']) && validatedData.status === 'dispensed');
 
     if (!isAuthorized) {
       return NextResponse.json(
@@ -86,16 +91,13 @@ export async function PUT(
       );
     }
 
-    const body = await request.json();
-    const validatedData = prescriptionUpdateSchema.parse(body);
-
     // Pharmacist can only update status to 'dispensed'
     let dataToUpdate = validatedData;
     if (hasRole(currentUser.role, ['pharmacist'])) {
       dataToUpdate = { status: 'dispensed' };
     }
 
-    const updatedPrescription = await db.prescriptions.update(params.id, {
+    const updatedPrescription = await db.prescriptions.update(id, {
       ...dataToUpdate,
       updated_at: new Date().toISOString(),
     });

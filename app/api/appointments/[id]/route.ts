@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { updateAppointmentSchema } from '@/lib/validators';
-import { getAuthToken, hasRole } from '@/lib/auth';
+import { getAuthToken, hasRole, verifyToken } from '@/lib/auth';
 import { ZodError } from 'zod';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -17,7 +18,15 @@ export async function GET(
       );
     }
 
-    const appointment = await db.appointments.getById(params.id);
+    const decoded = verifyToken(token);
+    if (!decoded.valid) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    const appointment = await db.appointments.getById(id);
     if (!appointment) {
       return NextResponse.json(
         { success: false, error: 'Appointment not found' },
@@ -26,7 +35,7 @@ export async function GET(
     }
 
     // Check authorization: patient (owner), doctor (assigned), or admin
-    const currentUser = await db.users.getById(token);
+    const currentUser = await db.users.getById(decoded.userId!);
     if (!currentUser) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -35,8 +44,8 @@ export async function GET(
     }
 
     const isAuthorized =
-      appointment.patient_id === token ||
-      appointment.doctor_id === token ||
+      appointment.patient_id === decoded.userId ||
+      appointment.doctor_id === decoded.userId ||
       hasRole(currentUser.role, ['admin']);
 
     if (!isAuthorized) {
@@ -61,9 +70,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -72,7 +82,15 @@ export async function PUT(
       );
     }
 
-    const appointment = await db.appointments.getById(params.id);
+    const decoded = verifyToken(token);
+    if (!decoded.valid) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    const appointment = await db.appointments.getById(id);
     if (!appointment) {
       return NextResponse.json(
         { success: false, error: 'Appointment not found' },
@@ -80,7 +98,7 @@ export async function PUT(
       );
     }
 
-    const currentUser = await db.users.getById(token);
+    const currentUser = await db.users.getById(decoded.userId!);
     if (!currentUser) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -90,9 +108,9 @@ export async function PUT(
 
     // Check authorization: doctor, admin, or patient (owner) can update
     const isAuthorized =
-      appointment.doctor_id === token ||
+      appointment.doctor_id === decoded.userId ||
       hasRole(currentUser.role, ['admin']) ||
-      (appointment.patient_id === token && currentUser.role === 'patient');
+      (appointment.patient_id === decoded.userId && currentUser.role === 'patient');
 
     if (!isAuthorized) {
       return NextResponse.json(
@@ -104,47 +122,42 @@ export async function PUT(
     const body = await request.json();
     const validatedData = updateAppointmentSchema.parse(body);
 
-    // Jika pasien, batasi update hanya pada status (cancel) atau waktu (reschedule)
+    // Restrict patient updates to cancellation and rescheduling only.
     if (currentUser.role === 'patient') {
-      // Pasien hanya boleh mengubah status (misal ke 'cancelled') atau appointment_date & appointment_time
-      const allowedFields = ['status', 'appointment_date', 'appointment_time'];
+      const allowedFields = ['status', 'appointment_date'];
       const requestedFields = Object.keys(validatedData);
       const isOnlyAllowed = requestedFields.every(field => allowedFields.includes(field));
       if (!isOnlyAllowed) {
         return NextResponse.json(
-          { success: false, error: 'Pasien hanya dapat membatalkan atau menjadwal ulang janji temu' },
+          { success: false, error: 'Patients can only cancel or reschedule appointments' },
           { status: 403 }
         );
       }
 
-      // Jika mengubah waktu, validasi ketersediaan
-      if (validatedData.appointment_date || validatedData.appointment_time) {
+      if (validatedData.appointment_date) {
         const newDate = validatedData.appointment_date || appointment.appointment_date;
-        const newTime = validatedData.appointment_time || appointment.appointment_time;
         const isAvailable = await db.appointments.checkAvailability(
           appointment.doctor_id,
           newDate,
-          newTime,
-          params.id // exclude current appointment from check
+          id // exclude current appointment from check
         );
         if (!isAvailable) {
           return NextResponse.json(
-            { success: false, error: 'Jadwal dokter sudah terisi pada waktu tersebut' },
+            { success: false, error: 'Selected appointment slot is not available' },
             { status: 409 }
           );
         }
       }
 
-      // Jika pasien membatalkan, hanya status 'cancelled' yang diizinkan
       if (validatedData.status && validatedData.status !== 'cancelled') {
         return NextResponse.json(
-          { success: false, error: 'Pasien hanya dapat membatalkan janji temu (status cancelled)' },
+          { success: false, error: 'Patients can only set status to cancelled' },
           { status: 403 }
         );
       }
     }
 
-    const updatedAppointment = await db.appointments.update(params.id, {
+    const updatedAppointment = await db.appointments.update(id, {
       ...validatedData,
       updated_at: new Date().toISOString(),
     });
@@ -172,9 +185,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -183,7 +197,15 @@ export async function DELETE(
       );
     }
 
-    const appointment = await db.appointments.getById(params.id);
+    const decoded = verifyToken(token);
+    if (!decoded.valid) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    const appointment = await db.appointments.getById(id);
     if (!appointment) {
       return NextResponse.json(
         { success: false, error: 'Appointment not found' },
@@ -192,9 +214,15 @@ export async function DELETE(
     }
 
     // Check authorization - doctor or admin can delete
-    const currentUser = await db.users.getById(token);
+    const currentUser = await db.users.getById(decoded.userId!);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 401 }
+      );
+    }
     const isAuthorized =
-      appointment.doctor_id === token ||
+      appointment.doctor_id === decoded.userId ||
       hasRole(currentUser.role, ['admin']);
 
     if (!isAuthorized) {
@@ -204,7 +232,7 @@ export async function DELETE(
       );
     }
 
-    await db.appointments.delete(params.id);
+    await db.appointments.delete(id);
     return NextResponse.json({
       success: true,
       message: 'Appointment deleted successfully',

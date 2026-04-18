@@ -6,9 +6,10 @@ import { ZodError } from 'zod';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -17,7 +18,7 @@ export async function GET(
       );
     }
 
-    const medication = await db.medications.getById(params.id);
+    const medication = await db.medications.getById(id);
     if (!medication) {
       return NextResponse.json(
         { success: false, error: 'Medication not found' },
@@ -40,9 +41,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -61,7 +63,7 @@ export async function PUT(
       );
     }
 
-    const medication = await db.medications.getById(params.id);
+    const medication = await db.medications.getById(id);
     if (!medication) {
       return NextResponse.json(
         { success: false, error: 'Medication not found' },
@@ -72,7 +74,7 @@ export async function PUT(
     const body = await request.json();
     const validatedData = medicationSchema.parse(body);
 
-    const updatedMedication = await db.medications.update(params.id, {
+    const updatedMedication = await db.medications.update(id, {
       ...validatedData,
       updated_at: new Date().toISOString(),
     });

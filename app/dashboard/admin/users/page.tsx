@@ -114,6 +114,7 @@ export default function AdminUsersPage() {
           alert('Password and confirm password must match');
           return;
         }
+        bodyData.confirmPassword = bodyData.confirmPassword || bodyData.password;
       }
 
       if (editingUser && !bodyData.password) {
@@ -134,6 +135,9 @@ export default function AdminUsersPage() {
         fetchUsers();
         setDialogOpen(false);
         resetForm();
+      } else {
+        const errorData = await response.json().catch(() => null);
+        alert(errorData?.error || 'Failed to save user');
       }
     } catch (error) {
       console.error('Failed to save user:', error);
@@ -159,8 +163,17 @@ export default function AdminUsersPage() {
     if (!confirm('Are you sure you want to delete this user?')) return;
 
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
       const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {

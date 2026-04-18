@@ -116,9 +116,21 @@ export async function POST(request: NextRequest) {
       validatedData.patient_id = decoded.userId!;
     }
 
+    const isAvailable = await db.appointments.checkAvailability(
+      validatedData.doctor_id,
+      validatedData.appointment_date
+    );
+
+    if (!isAvailable) {
+      return NextResponse.json(
+        { success: false, error: 'Selected appointment slot is not available' },
+        { status: 409 }
+      );
+    }
+
     const appointment = await db.appointments.create({
       ...validatedData,
-      status: 'scheduled',
+      status: currentUser.role === 'patient' ? 'pending' : 'scheduled',
     });
 
     return NextResponse.json(

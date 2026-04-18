@@ -4,11 +4,17 @@ import { userUpdateSchema } from '@/lib/validators';
 import { getAuthToken, hasRole, hashPassword } from '@/lib/auth';
 import { ZodError } from 'zod';
 
+async function resolveRouteId(params: { id: string } | Promise<{ id: string }>) {
+  const resolvedParams = await Promise.resolve(params);
+  return resolvedParams?.id;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await resolveRouteId(params);
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -17,7 +23,14 @@ export async function GET(
       );
     }
 
-    const user = await db.users.getById(params.id);
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid user id' },
+        { status: 400 }
+      );
+    }
+
+    const user = await db.users.getById(userId);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -34,7 +47,7 @@ export async function GET(
       );
     }
 
-    if (token !== params.id && !hasRole(currentUser.role, ['admin'])) {
+    if (token !== userId && !hasRole(currentUser.role, ['admin'])) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }
@@ -57,14 +70,22 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await resolveRouteId(params);
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid user id' },
+        { status: 400 }
       );
     }
 
@@ -77,7 +98,7 @@ export async function PUT(
       );
     }
 
-    if (token !== params.id && !hasRole(currentUser.role, ['admin'])) {
+    if (token !== userId && !hasRole(currentUser.role, ['admin'])) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }
@@ -96,7 +117,7 @@ export async function PUT(
       updates.password_hash = await hashPassword(body.password);
     }
 
-    const updatedUser = await db.users.update(params.id, updates);
+    const updatedUser = await db.users.update(userId, updates);
 
     const { password_hash, ...userWithoutPassword } = updatedUser;
     return NextResponse.json({
@@ -122,14 +143,22 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await resolveRouteId(params);
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid user id' },
+        { status: 400 }
       );
     }
 
@@ -142,7 +171,7 @@ export async function DELETE(
       );
     }
 
-    await db.users.delete(params.id);
+    await db.users.delete(userId);
     return NextResponse.json({
       success: true,
       message: 'User deleted successfully',

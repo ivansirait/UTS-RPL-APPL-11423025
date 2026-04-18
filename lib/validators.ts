@@ -31,7 +31,8 @@ export const appointmentSchema = z.object({
 });
 
 export const updateAppointmentSchema = z.object({
-  status: z.enum(['scheduled', 'completed', 'cancelled', 'no-show']).optional(),
+  appointment_date: z.string().datetime('Invalid date').optional(),
+  status: z.enum(['pending', 'scheduled', 'completed', 'cancelled', 'no-show']).optional(),
   notes: z.string().optional(),
 });
 
@@ -46,6 +47,7 @@ export const medicalRecordSchema = z.object({
   medications: z.string().optional(),
   allergies: z.string().optional(),
   physical_examination: z.string().optional(),
+  lab_results: z.string().optional(),
   diagnosis: z.string().optional(),
   treatment_plan: z.string().optional(),
   notes: z.string().optional(),
@@ -91,7 +93,7 @@ export const paymentSchema = z.object({
   appointment_id: z.string().uuid('Invalid appointment ID').optional(),
   amount: z.number().positive('Amount must be positive'),
   currency: z.string().default('USD'),
-  payment_method: z.enum(['credit_card', 'debit_card', 'bank_transfer', 'cash']),
+  payment_method: z.enum(['credit_card', 'debit_card', 'bank_transfer', 'cash', 'insurance_claim']),
   description: z.string().optional(),
 });
 
@@ -99,7 +101,7 @@ export const paymentSchema = z.object({
 export const userCreateSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(6, 'Confirm password must be at least 6 characters'),
+  confirmPassword: z.string().min(6, 'Confirm password must be at least 6 characters').optional(),
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
   role: z.enum(['patient', 'doctor', 'admin', 'pharmacist']),
   phone: z.string().optional(),
@@ -113,7 +115,7 @@ export const userCreateSchema = z.object({
   specialization: z.string().optional(),
   license_number: z.string().optional(),
   department_id: z.string().uuid('Invalid department ID').optional(),
-}).refine((data) => data.password === data.confirmPassword, {
+}).refine((data) => !data.confirmPassword || data.password === data.confirmPassword, {
   message: 'Passwords must match',
   path: ['confirmPassword'],
 });

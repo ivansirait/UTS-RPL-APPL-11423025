@@ -4,9 +4,10 @@ import { getAuthToken, hasRole } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -15,7 +16,7 @@ export async function GET(
       );
     }
 
-    const payment = await db.payments.getById(params.id);
+    const payment = await db.payments.getById(id);
     if (!payment) {
       return NextResponse.json(
         { success: false, error: 'Payment not found' },
@@ -51,9 +52,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = getAuthToken(request);
     if (!token) {
       return NextResponse.json(
@@ -72,7 +74,7 @@ export async function PUT(
       );
     }
 
-    const payment = await db.payments.getById(params.id);
+    const payment = await db.payments.getById(id);
     if (!payment) {
       return NextResponse.json(
         { success: false, error: 'Payment not found' },
@@ -90,7 +92,7 @@ export async function PUT(
       );
     }
 
-    const updatedPayment = await db.payments.update(params.id, {
+    const updatedPayment = await db.payments.update(id, {
       status,
       updated_at: new Date().toISOString(),
     });

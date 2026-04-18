@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/db'; // Import koneksi supabase
+import { supabaseClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, Users, FileText, Pill, CreditCard, BarChart3, CheckCircle2, XCircle } from 'lucide-react';
@@ -13,7 +13,7 @@ export default function Home() {
     const checkConnection = async () => {
       try {
         // Mencoba mengambil data minimal dari tabel users
-        const { data, error } = await supabase.from('users').select('id').limit(1);
+        const { data, error } = await supabaseClient.from('users').select('id').limit(1);
         
         if (error) {
           console.error('❌ Supabase Error:', error.message);
